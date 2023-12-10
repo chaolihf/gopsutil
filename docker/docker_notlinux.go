@@ -6,7 +6,7 @@ package docker
 import (
 	"context"
 
-	"github.com/shirou/gopsutil/v3/internal/common"
+	"github.com/chaolihf/gopsutil/internal/common"
 )
 
 // GetDockerStat returns a list of Docker basic stats.

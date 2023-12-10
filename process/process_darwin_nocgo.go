@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/internal/common"
+	"github.com/chaolihf/gopsutil/cpu"
+	"github.com/chaolihf/gopsutil/internal/common"
 )
 
 func (p *Process) CwdWithContext(ctx context.Context) (string, error) {

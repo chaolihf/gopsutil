@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shirou/gopsutil/v3/internal/common"
+	"github.com/chaolihf/gopsutil/internal/common"
 )
 
 var whiteSpaces = regexp.MustCompile(`\s+`)

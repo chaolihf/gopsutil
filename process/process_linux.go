@@ -18,9 +18,9 @@ import (
 	"github.com/tklauser/go-sysconf"
 	"golang.org/x/sys/unix"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/internal/common"
-	"github.com/shirou/gopsutil/v3/net"
+	"github.com/chaolihf/gopsutil/cpu"
+	"github.com/chaolihf/gopsutil/internal/common"
+	"github.com/chaolihf/gopsutil/net"
 )
 
 var pageSize = uint64(os.Getpagesize())

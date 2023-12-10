@@ -12,5 +12,3 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3
 	golang.org/x/sys v0.15.0
 )
-
-retract v3.22.11

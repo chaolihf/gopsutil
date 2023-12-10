@@ -18,9 +18,9 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/internal/common"
-	"github.com/shirou/gopsutil/v3/net"
+	"github.com/chaolihf/gopsutil/cpu"
+	"github.com/chaolihf/gopsutil/internal/common"
+	"github.com/chaolihf/gopsutil/net"
 	"golang.org/x/sys/windows"
 )
 

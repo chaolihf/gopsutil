@@ -1,4 +1,4 @@
-//go:build !darwin && !linux && !freebsd && !openbsd && !netbsd && !windows && !solaris && !aix 
+//go:build !darwin && !linux && !freebsd && !openbsd && !netbsd && !windows && !solaris && !aix
 // +build !darwin,!linux,!freebsd,!openbsd,!netbsd,!windows,!solaris,!aix
 
 package disk
@@ -6,7 +6,7 @@ package disk
 import (
 	"context"
 
-	"github.com/shirou/gopsutil/v3/internal/common"
+	"github.com/chaolihf/gopsutil/internal/common"
 )
 
 func IOCountersWithContext(ctx context.Context, names ...string) (map[string]IOCountersStat, error) {
