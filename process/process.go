@@ -20,6 +20,7 @@ var (
 	ErrorNoChildren                       = errors.New("process does not have children")
 	ErrorProcessNotRunning                = errors.New("process does not exist")
 	ErrorNotPermitted                     = errors.New("operation not permitted")
+	systemBootTime         uint64         //缓存操作系统启动时间
 )
 
 type Process struct {
@@ -40,7 +41,14 @@ type Process struct {
 	lastCPUTimes *cpu.TimesStat
 	lastCPUTime  time.Time
 
-	tgid int32
+	tgid            int32
+	lastPidScanTime int64 // 记录上一次读取进程状态时间（毫秒)，下面为对应的数据
+	terminal        uint64
+	ppid            int32
+	cpuTimes        *cpu.TimesStat
+	rtpriority      uint32
+	nice            int32
+	faults          *PageFaultsStat
 }
 
 // Process status

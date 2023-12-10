@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/tklauser/go-sysconf"
 	"golang.org/x/sys/unix"
@@ -1016,6 +1017,11 @@ func (p *Process) fillFromTIDStat(tid int32) (uint64, int32, *cpu.TimesStat, int
 }
 
 func (p *Process) fillFromTIDStatWithContext(ctx context.Context, tid int32) (uint64, int32, *cpu.TimesStat, int64, uint32, int32, *PageFaultsStat, error) {
+	//如果不是线程并且是已经缓存过不超过1秒的就直接返回解析过的结果
+	now := time.Now().UnixMicro()
+	if tid == -1 && now-p.lastPidScanTime < 1000 {
+		return p.terminal, p.ppid, p.cpuTimes, p.createTime, p.rtpriority, p.nice, p.faults, nil
+	}
 	pid := p.Pid
 	var statPath string
 
@@ -1070,8 +1076,13 @@ func (p *Process) fillFromTIDStatWithContext(ctx context.Context, tid int32) (ui
 		System: stime / float64(clockTicks),
 		Iowait: iotime / float64(clockTicks),
 	}
-
-	bootTime, _ := common.BootTimeWithContext(ctx)
+	var bootTime uint64
+	if systemBootTime == 0 {
+		bootTime, _ := common.BootTimeWithContext(ctx)
+		systemBootTime = bootTime
+	} else {
+		bootTime = systemBootTime
+	}
 	t, err := strconv.ParseUint(fields[22], 10, 64)
 	if err != nil {
 		return 0, 0, nil, 0, 0, 0, nil, err
