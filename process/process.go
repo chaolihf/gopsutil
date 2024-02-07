@@ -49,6 +49,10 @@ type Process struct {
 	rtpriority      uint32
 	nice            int32
 	faults          *PageFaultsStat
+	nsTgid          int32 // 记录容器中的thread group 进程号 -1表示不是容器内进程，0表示未进行检测，正值表示为容器内进程号
+	nsPid           int32
+	nsPgid          int32
+	nsSid           int32
 }
 
 // Process status

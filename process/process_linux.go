@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/tklauser/go-sysconf"
@@ -1006,8 +1007,31 @@ func (p *Process) fillFromStatusWithContext(ctx context.Context) error {
 				return err
 			}
 			p.sigInfo.Caught = v
+		case "NStgid": // 获取容器内部的进程号
+			pval, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return err
+			}
+			p.nsTgid = int32(pval)
+		case "NSpid":
+			pval, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return err
+			}
+			p.nsPid = int32(pval)
+		case "NSpgid":
+			pval, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return err
+			}
+			p.nsPgid = int32(pval)
+		case "NSsid":
+			pval, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return err
+			}
+			p.nsSid = int32(pval)
 		}
-
 	}
 	return nil
 }
@@ -1128,7 +1152,16 @@ func (p *Process) fillFromTIDStatWithContext(ctx context.Context, tid int32) (ui
 		ChildMinorFaults: cMinFault,
 		ChildMajorFaults: cMajFault,
 	}
-
+	if tid == -1 {
+		p.lastPidScanTime = now
+		p.terminal = terminal
+		p.ppid = int32(ppid)
+		p.cpuTimes = cpuTimes
+		p.createTime = createTime
+		p.rtpriority = uint32(rtpriority)
+		p.nice = nice
+		p.faults = faults
+	}
 	return terminal, int32(ppid), cpuTimes, createTime, uint32(rtpriority), nice, faults, nil
 }
 
@@ -1195,4 +1228,79 @@ func splitProcStat(content []byte) []string {
 	fields[2] = string(name)
 	fields = append(fields, restFields...)
 	return fields
+}
+
+/*
+*
+获取此进程对应的容器内进程号
+对于Linux内核大于4.1的，在获取进程状态时已经获取了获得了相关信息不需要单独获取，对于其他的需要调用此方法获取值
+返回值-1表示不是容器内进程，0为异常或未获取，正值为实际进程号
+*/
+func (p *Process) GetContainerPid() (int32, error) {
+	if p.nsTgid != 0 {
+		return p.nsTgid, nil
+	}
+	pid := int(p.Pid)
+	var statTargetFile syscall.Stat_t
+	var statSelfFile syscall.Stat_t
+	if err := syscall.Stat(fmt.Sprintf("/proc/%d/ns/pid", pid), &statTargetFile); err != nil {
+		return 0, err
+	}
+	if err := syscall.Stat("/proc/self/ns/pid", &statSelfFile); err != nil {
+		return 0, err
+	}
+	if statTargetFile.Ino == statSelfFile.Ino {
+		p.nsTgid = -1
+		return -1, nil
+	} else {
+		// Otherwise browse all PIDs in the namespace of the target process trying to find which one corresponds to the host PID
+		files, err := os.ReadDir(fmt.Sprintf("/proc/%d/root/proc", pid))
+		if err != nil {
+			return 0, err
+		}
+		for _, file := range files {
+			fileName := file.Name()
+			firstChar := fileName[0]
+			if firstChar >= '0' && firstChar <= '9' {
+				getPid, err := sched_get_host_pid(fmt.Sprintf("/proc/%d/root/proc/%s/sched", pid, fileName))
+				if err == nil && getPid == pid {
+					nsPid, err := strconv.ParseInt(fileName, 10, 32)
+					if err == nil {
+						return int32(nsPid), nil
+					}
+					break
+				}
+			}
+		}
+	}
+	return 0, nil
+}
+
+// The first line of /proc/pid/sched looks like
+// java (1234, #threads: 12)
+// where 1234 is the host PID (before Linux 4.1)
+func sched_get_host_pid(path string) (int, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	var startIndex = -1
+	var endIndex = -1
+	for index, item := range contents {
+		if item == '(' {
+			startIndex = index
+		} else if item == ',' {
+			endIndex = index
+		} else if item == '\n' {
+			break
+		}
+	}
+	if startIndex == -1 || endIndex == -1 {
+		return 0, nil
+	}
+	pid, err := strconv.ParseInt(string(contents[startIndex+1:endIndex]), 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return int(pid), nil
 }

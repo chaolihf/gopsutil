@@ -13,6 +13,9 @@ func Test_Process(t *testing.T) {
 		t.Error(err.Error())
 	} else {
 		for _, item := range allProcess {
+			nsPid, _ := item.GetContainerPid()
+			fmt.Println(nsPid)
+
 			username, _ := item.Username()
 			fmt.Println(username)
 			name, _ := item.Name()
