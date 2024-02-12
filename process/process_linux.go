@@ -1225,7 +1225,7 @@ func splitProcStat(content []byte) []string {
 返回值-1表示不是容器内进程，0为异常或未获取，正值为实际进程号
 */
 func (p *Process) GetNamespacePid() (int32, error) {
-	if p.nsPgid == 0 {
+	if p.nsTgid == 0 {
 		p.fillFromStatus()
 	}
 	if p.nsTgid != 0 {
