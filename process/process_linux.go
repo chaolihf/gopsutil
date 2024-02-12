@@ -1007,31 +1007,19 @@ func (p *Process) fillFromStatusWithContext(ctx context.Context) error {
 				return err
 			}
 			p.sigInfo.Caught = v
-		case "NStgid": // 获取容器内部的进程号
-			pval, err := strconv.ParseInt(value, 10, 32)
+		case "NStgid": // 获取容器内部的线程组也就是进程号
+			// PID namespaces can be nested; the last one is the innermost one
+			nsPidParts := strings.Split(value, "\t")
+			pval, err := strconv.ParseInt(nsPidParts[len(nsPidParts)-1], 10, 32)
 			if err != nil {
 				return err
 			}
 			p.nsTgid = int32(pval)
-		case "NSpid":
-			pval, err := strconv.ParseInt(value, 10, 32)
-			if err != nil {
-				return err
-			}
-			p.nsPid = int32(pval)
-		case "NSpgid":
-			pval, err := strconv.ParseInt(value, 10, 32)
-			if err != nil {
-				return err
-			}
-			p.nsPgid = int32(pval)
-		case "NSsid":
-			pval, err := strconv.ParseInt(value, 10, 32)
-			if err != nil {
-				return err
-			}
-			p.nsSid = int32(pval)
 		}
+	}
+	if p.nsTgid == 0 {
+		//已获取过Status但没有通过Status文件找到对应的进程号
+		p.nsTgid = -2
 	}
 	return nil
 }
@@ -1232,11 +1220,14 @@ func splitProcStat(content []byte) []string {
 
 /*
 *
-获取此进程对应的容器内进程号
+获取此进程对应的命名空间内进程号
 对于Linux内核大于4.1的，在获取进程状态时已经获取了获得了相关信息不需要单独获取，对于其他的需要调用此方法获取值
 返回值-1表示不是容器内进程，0为异常或未获取，正值为实际进程号
 */
-func (p *Process) GetContainerPid() (int32, error) {
+func (p *Process) GetNamespacePid() (int32, error) {
+	if p.nsPgid == 0 {
+		p.fillFromStatus()
+	}
 	if p.nsTgid != 0 {
 		return p.nsTgid, nil
 	}
@@ -1250,6 +1241,7 @@ func (p *Process) GetContainerPid() (int32, error) {
 		return 0, err
 	}
 	if statTargetFile.Ino == statSelfFile.Ino {
+		//在相同的命名空间中
 		p.nsTgid = -1
 		return -1, nil
 	} else {
